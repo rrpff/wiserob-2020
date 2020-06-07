@@ -1,19 +1,31 @@
 export default class RandomThemer {
   constructor () {
-    this.nextResult = this._generateTheme({})
-    this._preload(this.nextResult)
+    this._nextResult = this._generateTheme({})
+    this._createPreloadElement()
+    this._preload(this._nextResult)
   }
 
   random () {
-    const result = this.nextResult
-    this.nextResult = this._generateTheme(result)
-    this._preload(this.nextResult)
+    const result = this._nextResult
+    this._nextResult = this._generateTheme(result)
+    this._preload(this._nextResult)
     return result
+  }
+
+  _createPreloadElement () {
+    this._preloadEl = document.createElement("span")
+    this._preloadEl.innerText = "hello world"
+    this._preloadEl.style.opacity = 0
+    this._preloadEl.style.position = "absolute"
+    this._preloadEl.style.left = "-9999px"
+    document.body.appendChild(this._preloadEl)
   }
 
   _preload (theme) {
     const image = new Image()
     image.src = theme.imageUrl
+
+    this._preloadEl.style.fontFamily = theme.fontFamily
   }
 
   _generateTheme (currentTheme) {
