@@ -84,48 +84,71 @@ const IMAGES = [
   "https://images.unsplash.com/photo-1570599560373-92ba6bb38cfd?ixlib=rb-1.2.1&q=80&fm=jpg&crop=entropy&cs=tinysrgb&w=1080&fit=max"
 ]
 
-const quoteMiddleware = quoter => async (state, emitter) => {
-  const random = arr => arr[Math.floor(Math.random() * arr.length)]
-  const randomFont = () => ({
-    alignment: random(FONT_ALIGNMENTS),
-    family: random(FONTS)
-  })
+class RandomThemer {
+  constructor () {
+    this.nextResult = this._generateTheme()
+    this._preload(this.nextResult)
+  }
 
-  const randomTheme = () => {
+  random () {
+    const result = this.nextResult
+    this.nextResult = this._generateTheme()
+    this._preload(this.nextResult)
+    return result
+  }
+
+  _preload (theme) {
+    const image = new Image()
+    image.src = theme.imageUrl
+  }
+
+  _generateTheme () {
+    const random = arr => arr[Math.floor(Math.random() * arr.length)]
+
     const { background, foregrounds } = random(COLOURS)
     const textColour = random(foregrounds)
-    const imageUrl = random(IMAGES)
-    const imagePosition = {
-      x: 15 + (Math.random() * 40) + "%",
-      y: 15 + (Math.random() * 40) + "%",
-    }
 
     return {
       backgroundColour: background,
-      textColour,
-      imageUrl,
-      imagePosition
+      textColour: textColour,
+      textAlignment: random(FONT_ALIGNMENTS),
+      fontFamily: random(FONTS),
+      imageUrl: random(IMAGES),
+      imagePosition: {
+        x: 15 + (Math.random() * 40) + "%",
+        y: 15 + (Math.random() * 40) + "%",
+      }
     }
   }
+}
 
-  state.quote = { loading: true, text: null, font: {} }
-  state.theme = randomTheme()
-  state.quote = { loading: false, text: await quoter.quote(), font: randomFont() }
-  state.theme = randomTheme()
+const quoteMiddleware = quoter => async (state, emitter) => {
+  state.quote = { loading: true, text: null }
+  state.quote = { loading: false, text: await quoter.quote() }
   emitter.emit("render")
 
   emitter.on("NEXT_QUOTE", async () => {
-    state.quote = { loading: true, text: state.quote.text, font: state.quote.font }
-    state.quote = { loading: false, text: await quoter.quote(), font: randomFont() }
-    state.theme = randomTheme()
+    state.quote = { loading: true, text: state.quote.text }
+    state.quote = { loading: false, text: await quoter.quote() }
     emitter.emit("render")
   })
 }
 
-const themeMiddleware = () => (state, emitter) => {
-  emitter.on("render", () => {
-    document.documentElement.style.background = state.theme.backgroundColour
-  })
+const themeMiddleware = themer => {
+  let lastQuote = null
+
+  return (state, emitter) => {
+    state.theme = themer.random()
+
+    emitter.on("render", () => {
+      if (lastQuote !== state.quote.text) {
+        state.theme = themer.random()
+        lastQuote = state.quote.text
+      }
+
+      document.documentElement.style.background = state.theme.backgroundColour
+    })
+  }
 }
 
 // text-shadow: yellow 2px 0px 0px, yellow -2px 0px 0px, yellow 0px 2px 0px, yellow 0px -2px 0px;
@@ -153,7 +176,7 @@ const Button = (text, colour, onClick) => html`
   " onclick=${onClick}>${text}</a>
 `
 
-const Image = (url, position) => html`
+const StockImage = (url, position) => html`
   <img style="
     max-width: 300px;
     position: absolute;
@@ -184,21 +207,24 @@ const Main = (state, emit) => {
       flex-wrap: wrap;
       flex-direction: column;
       color: ${state.theme.textColour};
-      font-family: ${state.quote.font.family};
-      text-align: ${state.quote.font.alignment};
+      font-family: ${state.theme.fontFamily};
+      text-align: ${state.theme.textAlignment};
       cursor: pointer;
     ">
       ${state.quote.loading ? null : [
         Quote(state.quote.text),
         Button("more wisdom?", state.theme.textColour, () => null),
-        Image(state.theme.imageUrl, state.theme.imagePosition)
+        StockImage(state.theme.imageUrl, state.theme.imagePosition)
       ]}
     </main>
   `
 }
 
+const quoter = new ApiQuoter()
+const themer = new RandomThemer()
+
 const app = choo()
-app.use(quoteMiddleware(new ApiQuoter()))
-app.use(themeMiddleware())
+app.use(quoteMiddleware(quoter))
+app.use(themeMiddleware(themer))
 app.route("/", Main)
 app.mount("main")
