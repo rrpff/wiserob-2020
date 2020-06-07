@@ -4,6 +4,13 @@ import choo from "https://dev.jspm.io/choo"
 import ApiQuoter from "./lib/api-quoter.js"
 import RandomThemer from "./lib/random-themer.js"
 
+const fontSize = (size) => {
+  const mobile = window.innerWidth < 500 // i know ok
+
+  if (size === "large") return mobile ? "36px" : "72px"
+  if (size === "medium") return mobile ? "24px" : "48px"
+}
+
 const quoteMiddleware = quoter => async (state, emitter) => {
   state.quote = { loading: true, text: null }
   state.quote = { loading: false, text: await quoter.quote() }
@@ -33,6 +40,11 @@ const themeMiddleware = themer => {
   }
 }
 
+const windowMiddleware = () => (state, emitter) => {
+  const resize = () => emitter.emit("render")
+  window.addEventListener("resize", resize)
+}
+
 const Logo = black => html`
   <a href="#!" style="
     display: block;
@@ -50,8 +62,8 @@ const Logo = black => html`
 
 const Quote = quote => html`
   <div style="
-    font-size: 72px;
-    line-height: 72px;
+    font-size: ${fontSize("large")};
+    line-height: ${fontSize("large")};
     width: 100%;
     z-index: 20;
   ">${quote}</div>
@@ -60,7 +72,7 @@ const Quote = quote => html`
 const Button = (text, colour, onClick) => html`
   <a href="#!" style="
     display: block;
-    font-size: 48px;
+    font-size: ${fontSize("medium")};
     color: ${colour};
     opacity: 0.5;
     width: 100%;
@@ -123,5 +135,6 @@ const themer = new RandomThemer()
 const app = choo()
 app.use(quoteMiddleware(quoter))
 app.use(themeMiddleware(themer))
+app.use(windowMiddleware())
 app.route("/", Main)
 app.mount("main")
