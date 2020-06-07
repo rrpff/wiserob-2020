@@ -1,12 +1,12 @@
 export default class RandomThemer {
   constructor () {
-    this.nextResult = this._generateTheme()
+    this.nextResult = this._generateTheme({})
     this._preload(this.nextResult)
   }
 
   random () {
     const result = this.nextResult
-    this.nextResult = this._generateTheme()
+    this.nextResult = this._generateTheme(result)
     this._preload(this.nextResult)
     return result
   }
@@ -16,18 +16,24 @@ export default class RandomThemer {
     image.src = theme.imageUrl
   }
 
-  _generateTheme () {
-    const random = arr => arr[Math.floor(Math.random() * arr.length)]
+  _generateTheme (currentTheme) {
+    const random = (arr, predicate, attempts = 0) => {
+      const value = arr[Math.floor(Math.random() * arr.length)]
+      if (attempts === MAX_ATTEMPTS || predicate === undefined || predicate(value))
+        return value
 
-    const { background, foregrounds } = random(COLOURS)
+      return random(arr, predicate, attempts + 1)
+    }
+
+    const { background, foregrounds } = random(COLOURS, v => v.background !== currentTheme.background)
     const textColour = random(foregrounds)
 
     return {
       backgroundColour: background,
       textColour: textColour,
       textAlignment: random(FONT_ALIGNMENTS),
-      fontFamily: random(FONTS),
-      imageUrl: random(IMAGES),
+      fontFamily: random(FONTS, v => v.fontFamily !== currentTheme.fontFamily),
+      imageUrl: random(IMAGES, v => v.imageUrl !== currentTheme.imageUrl),
       imagePosition: {
         x: 15 + (Math.random() * 40) + "%",
         y: 15 + (Math.random() * 40) + "%",
@@ -35,6 +41,8 @@ export default class RandomThemer {
     }
   }
 }
+
+const MAX_ATTEMPTS = 10
 
 const FONT_ALIGNMENTS = [
   "left",
