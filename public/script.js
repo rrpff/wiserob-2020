@@ -33,6 +33,21 @@ const themeMiddleware = themer => {
   }
 }
 
+const Logo = black => html`
+  <a href="#!" style="
+    display: block;
+    position: absolute;
+    top: 30px;
+    left: 30px;
+  ">
+    <img
+      src="/images/${black ? "logo-black" : "logo-white"}.png"
+      srcset="/images/${black ? "logo-black" : "logo-white"}@2x.png 2x"
+      style="width: 60px; opacity: 0.5;"
+    />
+  </a>
+`
+
 const Quote = quote => html`
   <div style="
     font-size: 72px;
@@ -93,6 +108,7 @@ const Main = (state, emit) => {
       cursor: pointer;
     ">
       ${state.quote.loading ? null : [
+        Logo(state.theme.textColour === "#000"),
         Quote(state.quote.text),
         Button("more wisdom?", state.theme.textColour, () => null),
         StockImage(state.theme.imageUrl, state.theme.imagePosition)
